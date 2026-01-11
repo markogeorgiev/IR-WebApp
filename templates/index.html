@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NF-Corpus Ranking Lab</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="top-nav">
+        <a class="brand" href="/">NF-Corpus Lab</a>
+        <div class="nav-links">
+          <a href="/">Home</a>
+          <a href="/models">Models</a>
+          <a href="/queries">Queries</a>
+          <a href="/rankings">Rankings</a>
+          <a href="/analysis">Analysis</a>
+        </div>
+      </nav>
+      <header class="hero">
+        <h1>NF-Corpus Ranking Lab</h1>
+        <p>Upload or paste queries, then compare ranking models.</p>
+      </header>
+
+      <section class="card">
+        <h2>Load Query Set</h2>
+        <p class="status">
+          Current: <strong>{{ source }}</strong> with
+          <strong>{{ query_count }}</strong> queries.
+        </p>
+        <form id="query-form">
+          <label for="queries_text">Paste queries (one per line)</label>
+          <textarea
+            id="queries_text"
+            name="queries_text"
+            rows="6"
+            placeholder="e.g. treatments for irritable bowel syndrome"
+          ></textarea>
+
+          <label for="query_file">Or upload JSON/CSV</label>
+          <input id="query_file" type="file" name="file" />
+
+          <div class="actions">
+            <button type="submit" data-source="text">Upload</button>
+            <button type="button" id="use-default">Use default NF-Corpus queries</button>
+          </div>
+        </form>
+        <p id="upload-status" class="status"></p>
+      </section>
+
+      <section class="card">
+        <h2>Query Dashboard</h2>
+        <p>Edit, add, or delete queries in the persistent set.</p>
+        <a class="button-link" href="/queries">Open query dashboard</a>
+      </section>
+
+      <section class="card">
+        <h2>Next Step</h2>
+        <p>Once your query set is uploaded, move on to model selection.</p>
+        <a class="button-link" href="/models">Go to model selection</a>
+      </section>
+
+      <section class="card">
+        <h2>Analysis</h2>
+        <p>View corpus-level agreement and feature diagnostics.</p>
+        <a class="button-link" href="/analysis">Go to analysis</a>
+      </section>
+
+      <section class="card">
+        <h2>Rankings Dashboard</h2>
+        <p>Generate rankings per model/query and refresh plots.</p>
+        <a class="button-link" href="/rankings">Open rankings dashboard</a>
+      </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}" data-page="index"></script>
+  </body>
+</html>

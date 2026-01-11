@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rankings Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="top-nav">
+        <a class="brand" href="/">NF-Corpus Lab</a>
+        <div class="nav-links">
+          <a href="/">Home</a>
+          <a href="/models">Models</a>
+          <a href="/queries">Queries</a>
+          <a href="/rankings">Rankings</a>
+          <a href="/analysis">Analysis</a>
+        </div>
+      </nav>
+      <header class="hero">
+        <h1>Rankings Dashboard</h1>
+        <p>Generate rankings for models and queries, then refresh plots.</p>
+      </header>
+
+      <section class="card">
+        <h2>Coverage</h2>
+        <div id="coverage-table"></div>
+      </section>
+
+      <section class="card">
+        <h2>Embedding Cache</h2>
+        <div id="embedding-cache"></div>
+      </section>
+
+      <section class="card">
+        <h2>Generate Rankings</h2>
+        <div class="grid">
+          <div>
+            <label for="rank-model">Model</label>
+            <select id="rank-model"></select>
+          </div>
+          <div>
+            <label for="rank-query">Query</label>
+            <select id="rank-query"></select>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="run-ranking">Run ranking</button>
+          <button id="run-all-models">All models × selected query</button>
+          <button id="run-all-queries">Selected model × all queries</button>
+          <button id="run-plots">Generate plots from existing rankings</button>
+        </div>
+        <p class="hint" id="rank-status">Status: idle</p>
+      </section>
+
+      <section class="card">
+        <h2>Ranking Console</h2>
+        <div id="ranking-console" class="console">
+          <div class="console-line">Ready to generate rankings.</div>
+        </div>
+      </section>
+
+      <a class="button-link" href="/analysis">Go to analysis</a>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}" data-page="rankings"></script>
+  </body>
+</html>

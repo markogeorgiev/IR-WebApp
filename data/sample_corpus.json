@@ -1,0 +1,27 @@
+[
+  {
+    "id": "D1",
+    "title": "Irritable Bowel Syndrome Overview",
+    "text": "Irritable bowel syndrome is a gastrointestinal disorder with abdominal pain and altered bowel habits. Treatments include diet changes, fiber, and stress management."
+  },
+  {
+    "id": "D2",
+    "title": "Vitamin D Deficiency",
+    "text": "Low vitamin D can cause fatigue, bone pain, and muscle weakness. Diagnosis is via blood test, and treatment includes supplements and sunlight exposure."
+  },
+  {
+    "id": "D3",
+    "title": "Chronic Kidney Disease Diet Tips",
+    "text": "Managing chronic kidney disease often involves limiting sodium, phosphorus, and protein. Diet plans should be personalized with medical guidance."
+  },
+  {
+    "id": "D4",
+    "title": "Metformin Information",
+    "text": "Metformin is commonly used for type 2 diabetes. Side effects can include nausea, diarrhea, and stomach upset, often improving over time."
+  },
+  {
+    "id": "D5",
+    "title": "Migraine Causes and Triggers",
+    "text": "Migraines can be triggered by stress, sleep changes, certain foods, or hormones. Symptoms include headache, nausea, and sensitivity to light."
+  }
+]

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Model Selection</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="top-nav">
+        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+        <div class="nav-links">
+          <a href="/index.html">Home</a>
+          <a href="/models.html">Models</a>
+          <a href="/queries.html">Queries</a>
+          <a href="/dashboard.html">Dashboard</a>
+          <a href="/doc_editor.html">Doc Improvement</a>
+        </div>
+      </nav>
+      <header class="hero">
+        <h1>Model Selection</h1>
+        <p>Pick a query and ranking model to see the top results.</p>
+      </header>
+
+      <section class="card">
+        <h2>Choose Inputs</h2>
+        <div class="grid">
+          <div>
+            <label for="query-select">Query</label>
+            <select id="query-select"></select>
+            <p class="hint" id="query-source"></p>
+          </div>
+          <div>
+            <label for="model-select">Model</label>
+            <select id="model-select"></select>
+            <p class="hint" id="model-status"></p>
+          </div>
+          <div class="results-control">
+            <label for="top-k">Results to show</label>
+            <select id="top-k">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">All</option>
+            </select>
+            <p class="hint">Choose how many top documents to display.</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="rank-btn" title="Run ranking for the selected model and query.">Rank Content</button>
+          <a class="button-link" href="/index.html" title="Return to the query upload screen.">Back to upload</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Model Console</h2>
+        <div id="model-console" class="console">
+          <div class="console-line">System ready. Choose a query and model.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Top Results</h2>
+        <div id="results"></div>
+      </section>
+
+      <section class="card">
+        <h2>Dashboard</h2>
+        <p>Generate rankings, track cache state, and view plots.</p>
+        <a class="button-link" href="/dashboard.html" title="Manage rankings, cache status, and plots.">Open dashboard</a>
+      </section>
+
+      <section class="card">
+        <h2>Maintenance</h2>
+        <p>Clearing embeddings forces dense models to re-embed the corpus (slow on CPU).</p>
+        <div class="actions">
+          <button class="button-danger" id="clear-embedding-cache" title="Delete cached SBERT embeddings and force re-embedding on next run.">Clear embedding cache</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="result-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-title">Document Details</h3>
+          <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <p id="modal-meta"></p>
+          <pre id="modal-text"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/app.js" data-page="models"></script>
+  </body>
+</html>

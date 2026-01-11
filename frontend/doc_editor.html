@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Document Improvement</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container wide">
+      <nav class="top-nav">
+        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+        <div class="nav-links">
+          <a href="/index.html">Home</a>
+          <a href="/models.html">Models</a>
+          <a href="/queries.html">Queries</a>
+          <a href="/dashboard.html">Dashboard</a>
+          <a href="/doc_editor.html">Doc Improvement</a>
+        </div>
+      </nav>
+      <header class="hero">
+        <h1>Document Improvement</h1>
+        <p>Search and edit documents, then compare ranking and feature changes.</p>
+      </header>
+
+      <section class="card">
+        <div class="actions">
+          <button id="add-doc-block">Add another document</button>
+        </div>
+      </section>
+
+      <div id="doc-blocks"></div>
+    </div>
+
+    <div id="plot-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content plot-modal">
+        <div class="modal-header">
+          <h3>Plot Preview</h3>
+          <button class="modal-close" id="plot-modal-close" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="plot-modal-frame">
+            <img id="plot-modal-image" class="modal-image" src="" alt="Plot preview" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/app.js" data-page="doc-editor"></script>
+  </body>
+</html>

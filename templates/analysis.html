@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ranking Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="top-nav">
+        <a class="brand" href="/">NF-Corpus Lab</a>
+        <div class="nav-links">
+          <a href="/">Home</a>
+          <a href="/models">Models</a>
+          <a href="/queries">Queries</a>
+          <a href="/rankings">Rankings</a>
+          <a href="/analysis">Analysis</a>
+        </div>
+      </nav>
+      <header class="hero">
+        <h1>Ranking Analysis</h1>
+        <p>Static plots generated from full-model rankings.</p>
+      </header>
+
+      <section class="card">
+        <h2>Agreement Across Models</h2>
+        <div class="plot-grid">
+          <img src="/plots/rbo/agreement_sparse_sparse.png" alt="Sparse-Sparse agreement plot" />
+          <img src="/plots/rbo/agreement_sparse_dense.png" alt="Sparse-Dense agreement plot" />
+          <img src="/plots/rbo/agreement_dense_dense.png" alt="Dense-Dense agreement plot" />
+          <img src="/plots/rbo/agreement_combined.png" alt="Combined agreement plot" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Feature Analysis</h2>
+        <div class="plot-grid">
+          <img src="/plots/feature_correlations.png" alt="Feature correlations heatmap" />
+          <img src="/plots/feature_importances.png" alt="Feature importance heatmap" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Generate Plots</h2>
+        <p>Runs all models to create full rankings and regenerate plots.</p>
+        <div class="actions">
+          <button id="run-analysis">Generate plots</button>
+        </div>
+        <p class="hint" id="analysis-status">Status: idle</p>
+      </section>
+
+      <div class="actions">
+        <a class="button-link" href="/models">Back to ranking</a>
+        <a class="button-link" href="/rankings">Open rankings dashboard</a>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}" data-page="analysis"></script>
+  </body>
+</html>

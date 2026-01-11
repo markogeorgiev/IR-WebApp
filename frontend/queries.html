@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Query Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="top-nav">
+        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+        <div class="nav-links">
+          <a href="/index.html">Home</a>
+          <a href="/models.html">Models</a>
+          <a href="/queries.html">Queries</a>
+          <a href="/dashboard.html">Dashboard</a>
+          <a href="/doc_editor.html">Doc Improvement</a>
+        </div>
+      </nav>
+      <header class="hero">
+        <h1>Query Dashboard</h1>
+        <p>Edit, add, or delete queries stored in the persistent set.</p>
+      </header>
+
+      <section class="card">
+        <h2>Current Queries</h2>
+        <div id="query-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>Add Query</h2>
+        <label for="new-query">Query text</label>
+        <textarea id="new-query" rows="3" placeholder="Add a new query"></textarea>
+        <div class="actions">
+          <button id="add-query" title="Append the new query to the saved set.">Add query</button>
+          <button class="button-danger" id="reset-queries" title="Replace your saved set with the default queries.">Reset to default</button>
+        </div>
+        <p class="hint" id="query-status"></p>
+      </section>
+
+      <a class="button-link" href="/index.html" title="Return to the home page.">Back to home</a>
+    </div>
+
+    <script src="/static/app.js" data-page="queries"></script>
+  </body>
+</html>

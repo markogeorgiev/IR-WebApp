@@ -1,0 +1,32 @@
+version: "3.9"
+services:
+  backend:
+    build: .
+    environment:
+      - CORPUS_DIR=/app/data
+      - CORPUS_PATH=/app/data/nfcorpus.csv
+      - EMBEDDING_CACHE_DIR=/app/data/cache
+      - PROJECT_ROOT=/app
+      - DATA_DIR=data
+      - RANKINGS_DIR=data/rankings
+      - OUTPUTS_DIR=outputs
+      - METRICS_DIR=metrics
+      - PLOTS_DIR=outputs/plots
+      - MODIFIED_DIR=outputs/modified
+    volumes:
+      - corpus_data:/app/data
+      - plots_data:/app/outputs
+    command: ["sh", "-c", "python scripts/prepare_corpus.py && python app.py"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8000:80"
+    depends_on:
+      - backend
+
+volumes:
+  corpus_data:
+  plots_data:
