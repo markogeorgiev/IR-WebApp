@@ -62,6 +62,7 @@ function createModelSection(model, queries) {
             <th>Old Score</th>
             <th>New Score</th>
             <th>Plot</th>
+            <th>Remove</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -136,6 +137,12 @@ function addDocRow(section, doc) {
   plotBtn.disabled = true;
   plotCell.appendChild(plotBtn);
 
+  const removeCell = document.createElement("td");
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "button-danger doc-remove";
+  removeBtn.textContent = "Remove";
+  removeCell.appendChild(removeBtn);
+
   const statusCell = cell("doc-status", "Status: idle");
 
   row.appendChild(cell("doc-id", doc.docId));
@@ -147,6 +154,7 @@ function addDocRow(section, doc) {
   row.appendChild(oldScoreCell);
   row.appendChild(newScoreCell);
   row.appendChild(plotCell);
+  row.appendChild(removeCell);
   row.appendChild(statusCell);
 
   const persistEdits = () => {
@@ -162,6 +170,44 @@ function addDocRow(section, doc) {
     localStorage.setItem(storageKey, JSON.stringify(rows));
   };
 
+  const persistRerank = (payload) => {
+    const storageKey = `nfcorpus_doc_rerank_${modelName}`;
+    const current = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    current[doc.docId] = {
+      old_rank: payload.old_rank ?? null,
+      new_rank: payload.new_rank ?? null,
+      rank_change: payload.rank_change ?? null,
+      old_score: payload.old_score ?? null,
+      new_score: payload.new_score ?? null,
+      plot_url: payload.plot_url || null,
+    };
+    localStorage.setItem(storageKey, JSON.stringify(current));
+  };
+
+  const applyPersistedRerank = () => {
+    const storageKey = `nfcorpus_doc_rerank_${modelName}`;
+    const current = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    const cached = current[doc.docId];
+    if (!cached) {
+      return;
+    }
+    row.querySelector(".old-rank").textContent = cached.old_rank ?? "-";
+    row.querySelector(".new-rank").textContent = cached.new_rank ?? "-";
+    row.querySelector(".rank-change").textContent = cached.rank_change ?? "-";
+    row.querySelector(".old-score").textContent =
+      cached.old_score === null || cached.old_score === undefined
+        ? "-"
+        : Number(cached.old_score).toFixed(4);
+    row.querySelector(".new-score").textContent =
+      cached.new_score === null || cached.new_score === undefined
+        ? "-"
+        : Number(cached.new_score).toFixed(4);
+    if (cached.plot_url) {
+      row.dataset.plotUrl = `${cached.plot_url}?t=${Date.now()}`;
+      plotBtn.disabled = false;
+    }
+  };
+
   abstractInput.addEventListener("input", () => {
     persistEdits();
   });
@@ -174,7 +220,28 @@ function addDocRow(section, doc) {
     openPlotModal(plotUrl, "1.1");
   });
 
+  removeBtn.addEventListener("click", () => {
+    const storageKey = `nfcorpus_doc_edits_${modelName}`;
+    const rerankKey = `nfcorpus_doc_rerank_${modelName}`;
+    const rows = Array.from(section.querySelectorAll("tbody tr"))
+      .filter((entry) => entry !== row)
+      .map((entry) => {
+        const abstract = entry.querySelector(".doc-abstract-input")?.value || "";
+        return {
+          doc_id: entry.dataset.docId,
+          title: entry.dataset.title || "",
+          abstract,
+        };
+      });
+    localStorage.setItem(storageKey, JSON.stringify(rows));
+    const cached = JSON.parse(localStorage.getItem(rerankKey) || "{}");
+    delete cached[doc.docId];
+    localStorage.setItem(rerankKey, JSON.stringify(cached));
+    row.remove();
+  });
+
   tbody.appendChild(row);
+  applyPersistedRerank();
   persistEdits();
   return row;
 }
@@ -255,6 +322,18 @@ async function rerankSection(section) {
       if (statusCell) {
         statusCell.textContent = "Status: rerank complete.";
       }
+      const modelName = section.dataset.model || "unknown";
+      const storageKey = `nfcorpus_doc_rerank_${modelName}`;
+      const current = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      current[result.doc_id] = {
+        old_rank: result.old_rank ?? null,
+        new_rank: result.new_rank ?? null,
+        rank_change: result.rank_change ?? null,
+        old_score: result.old_score ?? null,
+        new_score: result.new_score ?? null,
+        plot_url: result.plot_url || null,
+      };
+      localStorage.setItem(storageKey, JSON.stringify(current));
     });
 
     if (payload.plot_error) {
