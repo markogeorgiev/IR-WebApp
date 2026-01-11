@@ -23,78 +23,54 @@ async function fetchJson(url, options = {}) {
 const MODEL_GUIDANCE = {
   bm25: "Focus on exact term matches and include key phrases early in the text.",
   tfidf: "Use distinctive terms that differentiate the document from others.",
-  sbert: "Improve semantic clarity; add paraphrases of the query intent.",
   "sbert-minilm-v6": "Add concise, semantically aligned sentences.",
   "e5-small-v2": "Include explicit query-style phrasing and relevant synonyms.",
-  "ql-dirichlet": "Repeat important terms naturally to increase language model likelihood.",
 };
 
-function createDocBlock(index, models, queries) {
-  const block = document.createElement("div");
-  block.className = "doc-block";
-  block.dataset.block = String(index);
-  block.innerHTML = `
-    <h2>Document ${index}</h2>
-    <div class="doc-grid">
-      <div>
-        <label>Search document</label>
-        <input class="doc-search" type="text" placeholder="Search by ID or text" />
-        <button class="doc-search-btn">Search</button>
-        <div class="doc-results">
-          <select class="doc-select"></select>
+function createModelSection(model, queries) {
+  const section = document.createElement("section");
+  section.className = "card model-section";
+  section.dataset.model = model.name;
+  const guidance = MODEL_GUIDANCE[model.name] || "Choose a model to see guidance.";
+
+  section.innerHTML = `
+    <div class="model-header">
+      <div class="model-meta">
+        <h2>${model.label}</h2>
+        <p class="hint">${guidance}</p>
+      </div>
+      <div class="model-controls">
+        <div class="model-control">
+          <label for="query-${model.name}">Query</label>
+          <select id="query-${model.name}" class="model-query"></select>
         </div>
-      </div>
-      <div>
-        <label>Model</label>
-        <select class="doc-model"></select>
-        <div class="guidance"></div>
-      </div>
-      <div>
-        <label>Query</label>
-        <select class="doc-query"></select>
+        <button class="button-primary model-add-doc">+ Add document</button>
+        <button class="model-rerank-all">Rerank all</button>
+        <span class="hint model-status">Status: idle</span>
       </div>
     </div>
-    <div class="doc-grid">
-      <div>
-        <label>Title</label>
-        <input class="doc-title" type="text" placeholder="Document title" />
-      </div>
-      <div>
-        <label>Abstract</label>
-        <textarea class="doc-abstract" placeholder="Document abstract"></textarea>
-      </div>
-    </div>
-    <div class="actions">
-      <button class="doc-load-btn">Load document</button>
-      <button class="doc-rerank-btn">Save + rerank</button>
-    </div>
-    <p class="hint doc-status">Status: idle</p>
-    <div class="doc-add-more hidden">
-      <button class="doc-add-btn" title="Add another document block">+</button>
-      <span>Add another document</span>
-    </div>
-    <div class="rank-summary">
-      <div class="rank-metric">Old rank: <span class="old-rank">-</span></div>
-      <div class="rank-metric">New rank: <span class="new-rank">-</span></div>
-      <div class="rank-metric">Change: <span class="rank-change">-</span></div>
-      <div class="rank-metric">Old score: <span class="old-score">-</span></div>
-      <div class="rank-metric">New score: <span class="new-score">-</span></div>
-    </div>
-    <div class="plot-preview">
-      <img class="plot-image" alt="KLRVF comparison plot" />
+    <div class="table-wrap">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Doc ID</th>
+            <th>Title</th>
+            <th>Abstract</th>
+            <th>Old Rank</th>
+            <th>New Rank</th>
+            <th>Change</th>
+            <th>Old Score</th>
+            <th>New Score</th>
+            <th>Plot</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
   `;
 
-  const modelSelect = block.querySelector(".doc-model");
-  models.forEach((model) => {
-    const option = document.createElement("option");
-    option.value = model.name;
-    option.textContent = model.label;
-    option.disabled = !model.available;
-    modelSelect.appendChild(option);
-  });
-
-  const querySelect = block.querySelector(".doc-query");
+  const querySelect = section.querySelector(".model-query");
   queries.forEach((query) => {
     const option = document.createElement("option");
     option.value = query.id;
@@ -102,149 +78,498 @@ function createDocBlock(index, models, queries) {
     querySelect.appendChild(option);
   });
 
-  const guidance = block.querySelector(".guidance");
-  const updateGuidance = () => {
-    const modelName = modelSelect.value;
-    guidance.textContent = MODEL_GUIDANCE[modelName] || "Choose a model to see guidance.";
-  };
-  updateGuidance();
-  modelSelect.addEventListener("change", updateGuidance);
-
-  const searchBtn = block.querySelector(".doc-search-btn");
-  const searchInput = block.querySelector(".doc-search");
-  const docSelect = block.querySelector(".doc-select");
-  const loadBtn = block.querySelector(".doc-load-btn");
-  const titleInput = block.querySelector(".doc-title");
-  const abstractInput = block.querySelector(".doc-abstract");
-  const statusEl = block.querySelector(".doc-status");
-
-  searchBtn.addEventListener("click", async () => {
-    const term = searchInput.value.trim();
-    if (!term) {
-      statusEl.textContent = "Status: enter a search term.";
-      return;
-    }
-    statusEl.textContent = "Status: searching...";
-    try {
-      const payload = await fetchJson(`/api/docs/search?q=${encodeURIComponent(term)}`);
-      docSelect.innerHTML = "";
-      payload.results.forEach((item) => {
-        const option = document.createElement("option");
-        option.value = item.doc_id;
-        option.textContent = `${item.doc_id} | ${item.title}`;
-        docSelect.appendChild(option);
-      });
-      statusEl.textContent = `Status: ${payload.results.length} result(s).`;
-    } catch (error) {
-      statusEl.textContent = `Status: ${error.message}`;
-    }
-  });
-
-  loadBtn.addEventListener("click", async () => {
-    const docId = docSelect.value;
-    if (!docId) {
-      statusEl.textContent = "Status: select a document.";
-      return;
-    }
-    statusEl.textContent = "Status: loading document...";
-    try {
-      const payload = await fetchJson(`/api/docs/${encodeURIComponent(docId)}`);
-      titleInput.value = payload.title || "";
-      abstractInput.value = payload.abstract || "";
-      statusEl.textContent = "Status: document loaded.";
-    } catch (error) {
-      statusEl.textContent = `Status: ${error.message}`;
-    }
-  });
-
-  const rerankBtn = block.querySelector(".doc-rerank-btn");
-  const oldRankEl = block.querySelector(".old-rank");
-  const newRankEl = block.querySelector(".new-rank");
-  const changeEl = block.querySelector(".rank-change");
-  const oldScoreEl = block.querySelector(".old-score");
-  const newScoreEl = block.querySelector(".new-score");
-  const plotImg = block.querySelector(".plot-image");
-  const addMore = block.querySelector(".doc-add-more");
-  const addBtn = block.querySelector(".doc-add-btn");
-
-  rerankBtn.addEventListener("click", async () => {
-    const docId = docSelect.value;
-    if (!docId) {
-      statusEl.textContent = "Status: select a document.";
-      return;
-    }
-    statusEl.textContent = "Status: reranking...";
-    try {
-      const payload = await fetchJson("/api/docs/rerank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          doc_id: docId,
-          title: titleInput.value,
-          abstract: abstractInput.value,
-          model: modelSelect.value,
-          query_id: querySelect.value,
-        }),
-      });
-      oldRankEl.textContent = payload.old_rank ?? "-";
-      newRankEl.textContent = payload.new_rank ?? "-";
-      changeEl.textContent = payload.rank_change ?? "-";
-      oldScoreEl.textContent =
-        payload.old_score === null || payload.old_score === undefined
-          ? "-"
-          : payload.old_score.toFixed(4);
-      newScoreEl.textContent =
-        payload.new_score === null || payload.new_score === undefined
-          ? "-"
-          : payload.new_score.toFixed(4);
-      plotImg.src = `${payload.plot_url}?t=${Date.now()}`;
-      plotImg.classList.add("plot-image");
-      if (payload.plot_error) {
-        statusEl.textContent = `Status: rerank complete (plot error: ${payload.plot_error}).`;
-      } else {
-        statusEl.textContent = "Status: rerank complete.";
-      }
-      if (addMore) {
-        addMore.classList.remove("hidden");
-      }
-      setupPlotModal();
-    } catch (error) {
-      statusEl.textContent = `Status: ${error.message}`;
-    }
-  });
-
-  if (addBtn) {
-    addBtn.addEventListener("click", () => {
-      const event = new CustomEvent("doc:add");
-      window.dispatchEvent(event);
-    });
+  const addBtn = section.querySelector(".model-add-doc");
+  if (!model.available) {
+    section.classList.add("model-disabled");
+    addBtn.disabled = true;
+    querySelect.disabled = true;
+    const hint = document.createElement("p");
+    hint.className = "hint model-unavailable";
+    hint.textContent = "Model unavailable.";
+    section.querySelector(".model-meta")?.appendChild(hint);
   }
 
-  return block;
+  return { section, addBtn };
+}
+
+function addDocRow(section, doc) {
+  const tbody = section.querySelector("tbody");
+  if (!tbody) {
+    return null;
+  }
+  const modelName = section.dataset.model || "unknown";
+  const existing = tbody.querySelector(`tr[data-doc-id="${doc.docId}"]`);
+  if (existing) {
+    return null;
+  }
+
+  const row = document.createElement("tr");
+  row.dataset.docId = doc.docId;
+  row.dataset.title = doc.title;
+
+  const cell = (className, text) => {
+    const td = document.createElement("td");
+    if (className) {
+      td.className = className;
+    }
+    td.textContent = text;
+    return td;
+  };
+
+  const abstractCell = document.createElement("td");
+  abstractCell.className = "doc-abstract-cell";
+  const abstractInput = document.createElement("textarea");
+  abstractInput.className = "doc-abstract-input";
+  abstractInput.value = doc.abstract || "";
+  abstractCell.appendChild(abstractInput);
+
+  const oldRankCell = cell("metric old-rank", "-");
+  const newRankCell = cell("metric new-rank", "-");
+  const changeCell = cell("metric rank-change", "-");
+  const oldScoreCell = cell("metric old-score", "-");
+  const newScoreCell = cell("metric new-score", "-");
+
+  const plotCell = document.createElement("td");
+  const plotBtn = document.createElement("button");
+  plotBtn.className = "plot-open";
+  plotBtn.textContent = "View";
+  plotBtn.disabled = true;
+  plotCell.appendChild(plotBtn);
+
+  const statusCell = cell("doc-status", "Status: idle");
+
+  row.appendChild(cell("doc-id", doc.docId));
+  row.appendChild(cell("doc-title", doc.title));
+  row.appendChild(abstractCell);
+  row.appendChild(oldRankCell);
+  row.appendChild(newRankCell);
+  row.appendChild(changeCell);
+  row.appendChild(oldScoreCell);
+  row.appendChild(newScoreCell);
+  row.appendChild(plotCell);
+  row.appendChild(statusCell);
+
+  const persistEdits = () => {
+    const storageKey = `nfcorpus_doc_edits_${modelName}`;
+    const rows = Array.from(section.querySelectorAll("tbody tr")).map((entry) => {
+      const abstract = entry.querySelector(".doc-abstract-input")?.value || "";
+      return {
+        doc_id: entry.dataset.docId,
+        title: entry.dataset.title || "",
+        abstract,
+      };
+    });
+    localStorage.setItem(storageKey, JSON.stringify(rows));
+  };
+
+  abstractInput.addEventListener("input", () => {
+    persistEdits();
+  });
+
+  plotBtn.addEventListener("click", () => {
+    const plotUrl = row.dataset.plotUrl;
+    if (!plotUrl) {
+      return;
+    }
+    openPlotModal(plotUrl, "1.1");
+  });
+
+  tbody.appendChild(row);
+  persistEdits();
+  return row;
+}
+
+async function rerankSection(section) {
+  const statusEl = section.querySelector(".model-status");
+  const querySelect = section.querySelector(".model-query");
+  const rerankBtn = section.querySelector(".model-rerank-all");
+  const rows = Array.from(section.querySelectorAll("tbody tr"));
+  if (!querySelect?.value) {
+    statusEl.textContent = "Status: select a query.";
+    return;
+  }
+  if (!rows.length) {
+    statusEl.textContent = "Status: add at least one document.";
+    return;
+  }
+
+  const docs = rows.map((row) => {
+    const abstractInput = row.querySelector(".doc-abstract-input");
+    return {
+      doc_id: row.dataset.docId,
+      title: row.dataset.title || "",
+      abstract: abstractInput?.value || "",
+    };
+  });
+
+  statusEl.textContent = `Status: reranking ${docs.length} document(s)...`;
+  rows.forEach((row) => {
+    const statusCell = row.querySelector(".doc-status");
+    if (statusCell) {
+      statusCell.textContent = "Status: queued.";
+    }
+  });
+  if (rerankBtn) {
+    rerankBtn.disabled = true;
+  }
+
+  try {
+    const payload = await fetchJson("/api/docs/rerank/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: section.dataset.model,
+        query_id: querySelect.value,
+        docs,
+      }),
+    });
+
+    payload.results.forEach((result) => {
+      const row = section.querySelector(`tr[data-doc-id="${result.doc_id}"]`);
+      if (!row) {
+        return;
+      }
+      const statusCell = row.querySelector(".doc-status");
+      if (result.error) {
+        if (statusCell) {
+          statusCell.textContent = `Status: ${result.error}`;
+        }
+        return;
+      }
+      row.querySelector(".old-rank").textContent = result.old_rank ?? "-";
+      row.querySelector(".new-rank").textContent = result.new_rank ?? "-";
+      row.querySelector(".rank-change").textContent = result.rank_change ?? "-";
+      row.querySelector(".old-score").textContent =
+        result.old_score === null || result.old_score === undefined
+          ? "-"
+          : result.old_score.toFixed(4);
+      row.querySelector(".new-score").textContent =
+        result.new_score === null || result.new_score === undefined
+          ? "-"
+          : result.new_score.toFixed(4);
+      const plotBtn = row.querySelector(".plot-open");
+      row.dataset.plotUrl = `${result.plot_url}?t=${Date.now()}`;
+      if (plotBtn) {
+        plotBtn.disabled = false;
+      }
+      if (statusCell) {
+        statusCell.textContent = "Status: rerank complete.";
+      }
+    });
+
+    if (payload.plot_error) {
+      statusEl.textContent = `Status: rerank complete (plot error: ${payload.plot_error}).`;
+    } else {
+      statusEl.textContent = "Status: rerank complete.";
+    }
+  } catch (error) {
+    statusEl.textContent = `Status: ${error.message}`;
+  } finally {
+    if (rerankBtn) {
+      rerankBtn.disabled = false;
+    }
+  }
 }
 
 async function initDocEditorPage() {
-  const container = document.getElementById("doc-blocks");
-  const addBtn = document.getElementById("add-doc-block");
-  if (!container || !addBtn) {
+  const container = document.getElementById("model-sections");
+  const modal = document.getElementById("doc-modal");
+  if (!container || !modal) {
     return;
   }
+
+  const csvInput = document.getElementById("doc-csv");
+  const csvBtn = document.getElementById("doc-csv-upload");
+  const csvStatus = document.getElementById("doc-csv-status");
 
   const [modelsPayload, queriesPayload] = await Promise.all([
     fetchJson("/api/models"),
     fetchJson("/api/queries"),
   ]);
 
-  let index = 1;
-  const addBlock = () => {
-    const block = createDocBlock(index, modelsPayload.models, queriesPayload.queries);
-    container.appendChild(block);
-    index += 1;
+  const modalModelLabel = document.getElementById("doc-modal-model");
+  const modalClose = document.getElementById("doc-modal-close");
+  const modalCancel = document.getElementById("doc-cancel-btn");
+  const searchInput = document.getElementById("doc-search-input");
+  const searchBtn = document.getElementById("doc-search-btn");
+  const docSelect = document.getElementById("doc-select");
+  const loadBtn = document.getElementById("doc-load-btn");
+  const titleInput = document.getElementById("doc-title-input");
+  const abstractInput = document.getElementById("doc-abstract-input");
+  const addBtn = document.getElementById("doc-add-btn");
+  const statusEl = document.getElementById("doc-modal-status");
+  let activeSection = null;
+
+  const resetModal = () => {
+    if (searchInput) {
+      searchInput.value = "";
+    }
+    if (docSelect) {
+      docSelect.innerHTML = "";
+    }
+    if (titleInput) {
+      titleInput.value = "";
+    }
+    if (abstractInput) {
+      abstractInput.value = "";
+    }
+    if (statusEl) {
+      statusEl.textContent = "Ready.";
+    }
   };
 
-  addBtn.addEventListener("click", addBlock);
-  window.addEventListener("doc:add", addBlock);
-  addBlock();
+  const closeModal = () => {
+    modal.classList.add("hidden");
+    activeSection = null;
+  };
+
+  const openDocModal = (section, label) => {
+    activeSection = section;
+    if (modalModelLabel) {
+      modalModelLabel.textContent = label || "Model";
+    }
+    resetModal();
+    modal.classList.remove("hidden");
+  };
+
+  const modelSections = new Map();
+  modelsPayload.models.forEach((model) => {
+    const { section, addBtn } = createModelSection(
+      model,
+      queriesPayload.queries
+    );
+    container.appendChild(section);
+    modelSections.set(model.name, section);
+    addBtn.addEventListener("click", () => {
+      openDocModal(section, model.label);
+    });
+    const rerankBtn = section.querySelector(".model-rerank-all");
+    if (rerankBtn) {
+      rerankBtn.addEventListener("click", async () => {
+        await rerankSection(section);
+      });
+    }
+    const storageKey = `nfcorpus_doc_edits_${model.name}`;
+    const savedRows = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    if (Array.isArray(savedRows)) {
+      savedRows.forEach((entry) => {
+        if (!entry?.doc_id) {
+          return;
+        }
+        addDocRow(section, {
+          docId: entry.doc_id,
+          title: entry.title || "",
+          abstract: entry.abstract || "",
+        });
+      });
+    }
+  });
+
+  modalClose?.addEventListener("click", closeModal);
+  modalCancel?.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModal();
+    }
+  });
+
+  searchBtn?.addEventListener("click", async () => {
+    const term = searchInput?.value.trim() || "";
+    if (!term) {
+      statusEl.textContent = "Enter a search term.";
+      return;
+    }
+    statusEl.textContent = "Searching...";
+    try {
+      const payload = await fetchJson(`/api/docs/search?q=${encodeURIComponent(term)}`);
+      if (docSelect) {
+        docSelect.innerHTML = "";
+        payload.results.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.doc_id;
+          option.textContent = `${item.doc_id} | ${item.title}`;
+          docSelect.appendChild(option);
+        });
+      }
+      statusEl.textContent = `Found ${payload.results.length} result(s).`;
+    } catch (error) {
+      statusEl.textContent = error.message;
+    }
+  });
+
+  loadBtn?.addEventListener("click", async () => {
+    const docId = docSelect?.value;
+    if (!docId) {
+      statusEl.textContent = "Select a document.";
+      return;
+    }
+    statusEl.textContent = "Loading document...";
+    try {
+      const payload = await fetchJson(`/api/docs/${encodeURIComponent(docId)}`);
+      if (titleInput) {
+        titleInput.value = payload.title || "";
+      }
+      if (abstractInput) {
+        abstractInput.value = payload.abstract || "";
+      }
+      statusEl.textContent = "Document loaded.";
+    } catch (error) {
+      statusEl.textContent = error.message;
+    }
+  });
+
+  addBtn?.addEventListener("click", () => {
+    const docId = docSelect?.value;
+    if (!docId) {
+      statusEl.textContent = "Select a document first.";
+      return;
+    }
+    if (!activeSection) {
+      statusEl.textContent = "Select a model first.";
+      return;
+    }
+    const title = titleInput?.value.trim() || "";
+    const abstract = abstractInput?.value || "";
+    if (!title) {
+      statusEl.textContent = "Load the document details first.";
+      return;
+    }
+    const row = addDocRow(activeSection, { docId, title, abstract });
+    if (!row) {
+      statusEl.textContent = "Document already added.";
+      return;
+    }
+    closeModal();
+  });
+
+  const parseCsv = (text) => {
+    const rows = [];
+    let row = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i];
+      const next = text[i + 1];
+      if (char === "\"" && inQuotes && next === "\"") {
+        current += "\"";
+        i += 1;
+        continue;
+      }
+      if (char === "\"") {
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (char === "," && !inQuotes) {
+        row.push(current);
+        current = "";
+        continue;
+      }
+      if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (current || row.length) {
+          row.push(current);
+          rows.push(row);
+          row = [];
+          current = "";
+        }
+        continue;
+      }
+      current += char;
+    }
+    if (current || row.length) {
+      row.push(current);
+      rows.push(row);
+    }
+    return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
+  };
+
+  const normalizeModel = (name) => {
+    const key = (name || "").trim().toLowerCase();
+    if (key === "sbert") {
+      return "sbert-minilm-v6";
+    }
+    if (key === "e5") {
+      return "e5-small-v2";
+    }
+    return key;
+  };
+
+  const loadCsvFile = async () => {
+    if (!csvInput || !csvInput.files?.length) {
+      if (csvStatus) {
+        csvStatus.textContent = "Select a CSV file first.";
+      }
+      return;
+    }
+    const file = csvInput.files[0];
+    const text = await file.text();
+    const rows = parseCsv(text);
+    if (!rows.length) {
+      if (csvStatus) {
+        csvStatus.textContent = "CSV is empty.";
+      }
+      return;
+    }
+    const header = rows[0].map((cell) => cell.trim().toLowerCase());
+    const colIndex = (name) => header.indexOf(name);
+    const modelIdx = colIndex("model");
+    const docIdx = colIndex("doc_id");
+    const titleIdx = colIndex("title");
+    const abstractIdx = colIndex("abstract");
+    if (modelIdx === -1 || docIdx === -1 || titleIdx === -1 || abstractIdx === -1) {
+      if (csvStatus) {
+        csvStatus.textContent =
+          "CSV must include headers: model, doc_id, title, abstract.";
+      }
+      return;
+    }
+    let added = 0;
+    let skipped = 0;
+    rows.slice(1).forEach((row) => {
+      const modelName = normalizeModel(row[modelIdx]);
+      const docId = (row[docIdx] || "").trim();
+      if (!modelName || !docId) {
+        skipped += 1;
+        return;
+      }
+      const section = modelSections.get(modelName);
+      if (!section) {
+        skipped += 1;
+        return;
+      }
+      const title = row[titleIdx] || "";
+      const abstract = row[abstractIdx] || "";
+      const result = addDocRow(section, { docId, title, abstract });
+      if (result) {
+        added += 1;
+      } else {
+        skipped += 1;
+      }
+    });
+    if (csvStatus) {
+      csvStatus.textContent = `Loaded ${added} documents (${skipped} skipped).`;
+    }
+  };
+
+  if (csvBtn) {
+    csvBtn.addEventListener("click", async () => {
+      await loadCsvFile();
+    });
+  }
+
+  if (csvInput) {
+    csvInput.addEventListener("change", async () => {
+      if (csvInput.files?.length) {
+        await loadCsvFile();
+      }
+    });
+  }
+
+  setupPlotModal();
 }
 function initIndexPage() {
   const form = document.getElementById("query-form");
@@ -252,6 +577,8 @@ function initIndexPage() {
   const useDefaultBtn = document.getElementById("use-default");
   const sourceEl = document.getElementById("current-source");
   const countEl = document.getElementById("current-count");
+  const fileInput = document.getElementById("query_file");
+  const overlay = document.getElementById("drop-overlay");
 
   async function refreshSummary() {
     try {
@@ -271,11 +598,8 @@ function initIndexPage() {
 
   refreshSummary();
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  const uploadFormData = async (formData) => {
     status.textContent = "Uploading...";
-    const formData = new FormData(form);
-    formData.append("source", "upload");
     try {
       const payload = await fetchJson("/api/queries", {
         method: "POST",
@@ -286,23 +610,93 @@ function initIndexPage() {
     } catch (error) {
       status.textContent = error.message;
     }
+  };
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    formData.append("source", "upload");
+    await uploadFormData(formData);
   });
 
-  useDefaultBtn.addEventListener("click", async () => {
-    status.textContent = "Loading default queries...";
-    const formData = new FormData();
-    formData.append("source", "default");
-    try {
-      const payload = await fetchJson("/api/queries", {
-        method: "POST",
-        body: formData,
-      });
-      status.textContent = `Loaded ${payload.count} default queries.`;
-      refreshSummary();
-    } catch (error) {
-      status.textContent = error.message;
-    }
-  });
+  if (useDefaultBtn) {
+    useDefaultBtn.addEventListener("click", async () => {
+      status.textContent = "Loading default queries...";
+      const formData = new FormData();
+      formData.append("source", "default");
+      try {
+        const payload = await fetchJson("/api/queries", {
+          method: "POST",
+          body: formData,
+        });
+        status.textContent = `Loaded ${payload.count} default queries.`;
+        refreshSummary();
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+  }
+
+  if (overlay) {
+    let dragDepth = 0;
+    const showOverlay = () => {
+      overlay.classList.remove("hidden");
+    };
+    const hideOverlay = () => {
+      overlay.classList.add("hidden");
+    };
+
+    const hasFiles = (event) =>
+      Array.from(event.dataTransfer?.types || []).includes("Files");
+
+    document.addEventListener("dragenter", (event) => {
+      if (!hasFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      dragDepth += 1;
+      showOverlay();
+    });
+
+    document.addEventListener("dragover", (event) => {
+      if (!hasFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+    });
+
+    document.addEventListener("dragleave", (event) => {
+      if (!hasFiles(event)) {
+        return;
+      }
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) {
+        hideOverlay();
+      }
+    });
+
+    document.addEventListener("drop", async (event) => {
+      if (!hasFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      dragDepth = 0;
+      hideOverlay();
+      const file = event.dataTransfer?.files?.[0];
+      if (!file) {
+        return;
+      }
+      if (fileInput) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+      }
+      const formData = new FormData();
+      formData.append("source", "upload");
+      formData.append("file", file);
+      await uploadFormData(formData);
+    });
+  }
 }
 
 function renderResults(results) {
@@ -332,7 +726,10 @@ function renderResults(results) {
     row.innerHTML = `
       <td class="rank"><span class="rank-badge">${idx + 1}</span></td>
       <td class="score">${item.score.toFixed(4)}</td>
-      <td>${item.text}</td>
+      <td class="result-text">
+        <div class="result-id">ID: ${item.id}</div>
+        ${item.text}
+      </td>
     `;
     row.addEventListener("click", () => {
       openResultModal(item, idx + 1);
@@ -525,7 +922,7 @@ async function initModelsPage() {
   if (clearBtn) {
     clearBtn.addEventListener("click", async () => {
       const warning1 =
-        "This will delete cached SBERT embeddings. Rebuilding can take a long time on CPU-only systems.";
+        "This will delete cached dense embeddings (SBERT/E5). Rebuilding can take a long time on CPU-only systems.";
       const warning2 =
         "Are you absolutely sure? This action cannot be undone.";
       if (!window.confirm(warning1)) {
@@ -603,36 +1000,51 @@ async function initAnalysisPage() {
   });
 }
 
+let plotModal = null;
+let plotModalImage = null;
+let plotModalContent = null;
+
+function openPlotModal(src, zoom = "1.1") {
+  if (!plotModal || !plotModalImage) {
+    return;
+  }
+  plotModalImage.src = src;
+  if (plotModalContent) {
+    plotModalContent.style.setProperty("--plot-zoom", zoom);
+  }
+  plotModal.classList.remove("hidden");
+}
+
 function setupPlotModal() {
-  const modal = document.getElementById("plot-modal");
+  plotModal = document.getElementById("plot-modal");
   const modalClose = document.getElementById("plot-modal-close");
-  const modalImage = document.getElementById("plot-modal-image");
-  const modalContent = modal?.querySelector(".modal-content");
-  if (!modal || !modalClose || !modalImage) {
+  plotModalImage = document.getElementById("plot-modal-image");
+  plotModalContent = plotModal?.querySelector(".modal-content");
+  if (!plotModal || !modalClose || !plotModalImage) {
     return;
   }
   modalClose.addEventListener("click", () => {
-    modal.classList.add("hidden");
+    plotModal.classList.add("hidden");
   });
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.classList.add("hidden");
+  plotModal.addEventListener("click", (event) => {
+    if (event.target === plotModal) {
+      plotModal.classList.add("hidden");
     }
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      modal.classList.add("hidden");
+      plotModal.classList.add("hidden");
     }
   });
 
   document.querySelectorAll(".plot-image").forEach((img) => {
     img.addEventListener("click", () => {
-      modalImage.src = img.getAttribute("src");
-      const zoom = img.getAttribute("data-zoom") || "1.1";
-      if (modalContent) {
-        modalContent.style.setProperty("--plot-zoom", zoom);
+      const src = img.getAttribute("src");
+      if (!src) {
+        return;
       }
-      modal.classList.remove("hidden");
+      const zoom = img.getAttribute("data-zoom") || "1.1";
+      openPlotModal(src, zoom);
     });
     img.addEventListener("error", () => {
       img.classList.add("hidden");
@@ -992,6 +1404,36 @@ async function initRankingsPage() {
       } catch (error) {
         statusEl.textContent = error.message;
         logRankingConsole(`Plot generation failed: <em>${error.message}</em>`);
+      }
+    });
+  }
+
+  const clearBtn = document.getElementById("clear-embedding-cache");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", async () => {
+      const warning1 =
+        "This will delete cached dense embeddings (SBERT/E5). Rebuilding can take a long time on CPU-only systems.";
+      const warning2 =
+        "Are you absolutely sure? This action cannot be undone.";
+      if (!window.confirm(warning1)) {
+        return;
+      }
+      if (!window.confirm(warning2)) {
+        return;
+      }
+      statusEl.textContent = "Clearing embedding cache...";
+      logRankingConsole("Clearing embedding cache...");
+      try {
+        const payload = await fetchJson("/api/cache/embeddings/clear", {
+          method: "POST",
+        });
+        statusEl.textContent = `Cleared embedding cache (${payload.removed_files} files).`;
+        logRankingConsole(
+          `Embedding cache cleared. Removed <strong>${payload.removed_files}</strong> files.`
+        );
+      } catch (error) {
+        statusEl.textContent = error.message;
+        logRankingConsole(`Cache clear failed: <em>${error.message}</em>`);
       }
     });
   }

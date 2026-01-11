@@ -7,39 +7,55 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+    <nav class="top-nav">
+      <div class="nav-inner">
+        <a class="brand" href="/index.html">
+          <img class="brand-logo" src="/static/AIR-G22-IRMCN.png" alt="AIR-G22 IRMCN logo" />
+          <span class="brand-text">NF-Corpus Lab</span>
+        </a>
         <div class="nav-links">
           <a href="/index.html">Home</a>
           <a href="/models.html">Models</a>
-          <a href="/queries.html">Queries</a>
+          <a href="/queries.html" class="active">Queries</a>
           <a href="/dashboard.html">Dashboard</a>
           <a href="/doc_editor.html">Doc Improvement</a>
         </div>
-      </nav>
+      </div>
+    </nav>
+
+    <div class="container">
       <header class="hero">
-        <h1>Query Dashboard</h1>
+        <h1>Query Management</h1>
         <p>Edit, add, or delete queries stored in the persistent set.</p>
       </header>
 
-      <section class="card">
-        <h2>Current Queries</h2>
-        <div id="query-list"></div>
-      </section>
+      <div class="main-layout">
+        <div class="primary-panel">
+          <section class="card">
+            <h2>Current Queries</h2>
+            <div id="query-list"></div>
+          </section>
 
-      <section class="card">
-        <h2>Add Query</h2>
-        <label for="new-query">Query text</label>
-        <textarea id="new-query" rows="3" placeholder="Add a new query"></textarea>
-        <div class="actions">
-          <button id="add-query" title="Append the new query to the saved set.">Add query</button>
-          <button class="button-danger" id="reset-queries" title="Replace your saved set with the default queries.">Reset to default</button>
+          <section class="card">
+            <h2>Add New Query</h2>
+            <label for="new-query">Query text</label>
+            <textarea id="new-query" rows="3" placeholder="Add a new query"></textarea>
+            <div class="actions">
+              <button id="add-query" class="button-primary" title="Append the new query to the saved set.">Add query</button>
+            </div>
+            <p class="hint" id="query-status"></p>
+          </section>
         </div>
-        <p class="hint" id="query-status"></p>
-      </section>
 
-      <a class="button-link" href="/index.html" title="Return to the home page.">Back to home</a>
+        <aside class="secondary-panel">
+          <section class="card action-card">
+            <div class="card-icon">←</div>
+            <h3>Back</h3>
+            <p>Return to the home page.</p>
+            <a class="button-link button-primary" href="/index.html" title="Return to the home page.">Go home</a>
+          </section>
+        </aside>
+      </div>
     </div>
 
     <script src="/static/app.js" data-page="queries"></script>

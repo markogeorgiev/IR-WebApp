@@ -7,17 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   </head>
   <body>
+    {% set active_page = "home" %}
+    {% include "partials/header.html" %}
     <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/">NF-Corpus Lab</a>
-        <div class="nav-links">
-          <a href="/">Home</a>
-          <a href="/models">Models</a>
-          <a href="/queries">Queries</a>
-          <a href="/rankings">Rankings</a>
-          <a href="/analysis">Analysis</a>
-        </div>
-      </nav>
       <header class="hero">
         <h1>NF-Corpus Ranking Lab</h1>
         <p>Upload or paste queries, then compare ranking models.</p>
@@ -43,7 +35,6 @@
 
           <div class="actions">
             <button type="submit" data-source="text">Upload</button>
-            <button type="button" id="use-default">Use default NF-Corpus queries</button>
           </div>
         </form>
         <p id="upload-status" class="status"></p>
@@ -74,6 +65,12 @@
       </section>
     </div>
 
+    <div id="drop-overlay" class="drop-overlay hidden">
+      <div class="drop-overlay-content">
+        Drop your query file to upload
+        <span>.json or .csv</span>
+      </div>
+    </div>
     <script src="{{ url_for('static', filename='app.js') }}" data-page="index"></script>
   </body>
 </html>

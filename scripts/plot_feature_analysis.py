@@ -1,5 +1,7 @@
 import logging
 import math
+import os
+import sys
 import time
 from pathlib import Path
 
@@ -13,7 +15,12 @@ from sklearn.inspection import permutation_importance
 from sklearn.preprocessing import StandardScaler
 
 from dotenv import load_dotenv
-import os
+
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", ".")).resolve()
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from rankers.registry import list_rankers
 
 load_dotenv()
 
@@ -22,8 +29,6 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 LOGGER = logging.getLogger("plot_feature_analysis")
-
-PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", ".")).resolve()
 
 RANKINGS_DIR = PROJECT_ROOT / os.getenv("RANKINGS_DIR")
 DATA_DIR = PROJECT_ROOT / os.getenv("DATA_DIR")
@@ -65,6 +70,27 @@ def load_rankings(files):
     df["doc_rank"] = pd.to_numeric(df["doc_rank"], errors="coerce")
     df["doc_score"] = pd.to_numeric(df["doc_score"], errors="coerce")
     return df
+
+
+def _allowed_models():
+    return {m["name"] for m in list_rankers()}
+
+
+def _filter_ranking_files(files):
+    allowed = _allowed_models()
+    filtered = []
+    for path in files:
+        model_name = path.stem.replace("rankings_", "")
+        if model_name in allowed:
+            filtered.append(path)
+            continue
+        LOGGER.info("Ignoring rankings for removed model: %s", model_name)
+        try:
+            path.unlink()
+            LOGGER.info("Deleted stale rankings file: %s", path.name)
+        except OSError:
+            LOGGER.warning("Failed to delete stale rankings file: %s", path.name)
+    return filtered
 
 
 def load_features(klrvf_csv: Path, corpus_csv: Path):
@@ -345,7 +371,12 @@ def plot_importance_heatmaps(imp_df, out_path):
 
 
 def main():
-    rankings_df = load_rankings(RANKING_FILES)
+    ranking_files = _filter_ranking_files(RANKING_FILES)
+    rankings_df = load_rankings(ranking_files)
+    allowed = _allowed_models()
+    rankings_df = rankings_df[rankings_df["model"].isin(allowed)]
+    if rankings_df.empty:
+        raise RuntimeError("No rankings for active models after filtering.")
 
     if not KLRVF_CSV.exists():
         raise RuntimeError("Missing data/nfcorpus/nfcorpus_doc_klrvf.csv")

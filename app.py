@@ -7,6 +7,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
+import numpy as np
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from rankers.registry import build_ranker, clear_cache, get_ranker, list_rankers
@@ -158,6 +159,7 @@ CORPUS = load_corpus()
 CORPUS_RAW = load_corpus_raw()
 DOC_INDEX = {doc["id"]: idx for idx, doc in enumerate(CORPUS)}
 RANK_CACHE = {}
+RANKINGS_CACHE = {}
 ANALYSIS_STATE = {"status": "idle", "error": None, "last_run": None}
 RANKING_STATE = {
     "status": "idle",
@@ -362,6 +364,59 @@ def _build_modified_corpus(doc_id, title, abstract):
     return modified
 
 
+def _is_dense_model(model_name):
+    return model_name in {"sbert-minilm-v6", "e5-small-v2"}
+
+
+def _encode_passages(ranker, texts):
+    if hasattr(ranker, "_format_passage"):
+        texts = [ranker._format_passage(text) for text in texts]
+    return ranker._model.encode(texts, normalize_embeddings=True)
+
+
+def _encode_query(ranker, query_text):
+    if hasattr(ranker, "_format_query"):
+        query_text = ranker._format_query(query_text)
+    return ranker._model.encode([query_text], normalize_embeddings=True)[0]
+
+
+def _rank_dense_modified(model_name, query_text, edits):
+    ranker = get_ranker(model_name, CORPUS)
+    if not ranker:
+        return None, None, "model not available"
+
+    base_embeddings = ranker._embeddings
+    updated = base_embeddings.copy()
+
+    doc_ids = []
+    texts = []
+    for doc_id, edit in edits.items():
+        idx = DOC_INDEX.get(doc_id)
+        if idx is None:
+            continue
+        doc_ids.append(doc_id)
+        texts.append(_format_doc_text(edit["title"], edit["abstract"]))
+
+    if texts:
+        new_vectors = _encode_passages(ranker, texts)
+        for doc_id, vec in zip(doc_ids, new_vectors):
+            idx = DOC_INDEX.get(doc_id)
+            if idx is not None:
+                updated[idx] = vec
+
+    query_vec = _encode_query(ranker, query_text)
+    scores = np.dot(updated, query_vec)
+    order = np.argsort(scores)[::-1]
+
+    new_rank_map = {}
+    new_score_map = {}
+    for rank, idx in enumerate(order, start=1):
+        doc_id = CORPUS[idx]["id"]
+        new_rank_map[doc_id] = rank
+        new_score_map[doc_id] = float(scores[idx])
+    return new_rank_map, new_score_map, None
+
+
 def _modified_dir():
     root = os.environ.get("PROJECT_ROOT", APP_DIR)
     rel = os.environ.get("MODIFIED_DIR", "outputs/modified")
@@ -417,6 +472,37 @@ def _write_rankings_file(path, rows):
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
+
+
+def _rankings_file_path(model_name):
+    return os.path.join(_rankings_dir(), f"rankings_{model_name}.csv")
+
+
+def _load_rankings_cache(model_name):
+    path = _rankings_file_path(model_name)
+    if not os.path.exists(path):
+        return None
+    mtime = os.path.getmtime(path)
+    cached = RANKINGS_CACHE.get(model_name)
+    if cached and cached.get("mtime") == mtime:
+        return cached.get("by_query", {})
+    rows = _read_rankings_file(path)
+    by_query = {}
+    for row in rows:
+        query_id = str(row.get("query_id") or "")
+        if not query_id:
+            continue
+        by_query.setdefault(query_id, []).append(row)
+    RANKINGS_CACHE[model_name] = {"mtime": mtime, "by_query": by_query}
+    return by_query
+
+
+def _get_rankings_for_query(model_name, query_id):
+    by_query = _load_rankings_cache(model_name)
+    if not by_query:
+        return []
+    rows = by_query.get(str(query_id), [])
+    return sorted(rows, key=lambda row: int(row.get("doc_rank", 0) or 0))
 
 
 def _generate_rankings(model_name, queries):
@@ -581,16 +667,26 @@ def _run_plots_only():
 
 @app.route("/api/cache/embeddings/clear", methods=["POST"])
 def clear_embedding_cache():
+    root = os.environ.get("PROJECT_ROOT", APP_DIR)
     cache_dir = os.environ.get("EMBEDDING_CACHE_DIR", "data/cache")
+    if not os.path.isabs(cache_dir):
+        cache_dir = os.path.join(root, cache_dir)
     removed = 0
     if os.path.isdir(cache_dir):
-        for name in os.listdir(cache_dir):
-            if not name.startswith("sbert_"):
-                continue
-            path = os.path.join(cache_dir, name)
-            if os.path.isfile(path):
-                os.remove(path)
-                removed += 1
+        for root, dirs, files in os.walk(cache_dir, topdown=False):
+            for name in files:
+                path = os.path.join(root, name)
+                try:
+                    os.remove(path)
+                    removed += 1
+                except OSError:
+                    continue
+            for name in dirs:
+                path = os.path.join(root, name)
+                try:
+                    os.rmdir(path)
+                except OSError:
+                    continue
     clear_cache()
     RANK_CACHE.clear()
     return jsonify({"status": "cleared", "removed_files": removed})
@@ -788,25 +884,43 @@ def doc_rerank():
         )
         return jsonify({"error": str(exc)}), 500
 
-    modified_corpus = _build_modified_corpus(doc_id, title, abstract)
-    try:
-        modified_ranker = build_ranker(model_name, modified_corpus, use_cache=False)
-        if not modified_ranker:
-            return jsonify({"error": "model not available"}), 400
-        modified_results = modified_ranker.rank(query_text, top_k=top_k)
-        new_rank = next(
-            (idx + 1 for idx, item in enumerate(modified_results) if item["id"] == doc_id),
-            None,
-        )
-        new_score = next(
-            (item["score"] for item in modified_results if item["id"] == doc_id),
-            None,
-        )
-    except Exception as exc:
-        LOGGER.exception(
-            "Modified ranking failed for doc %s model %s", doc_id, model_name
-        )
-        return jsonify({"error": str(exc)}), 500
+    new_rank = None
+    new_score = None
+    if _is_dense_model(model_name):
+        edits = {doc_id: {"title": title, "abstract": abstract}}
+        try:
+            new_rank_map, new_score_map, error = _rank_dense_modified(
+                model_name, query_text, edits
+            )
+        except Exception as exc:
+            LOGGER.exception(
+                "Modified ranking failed for doc %s model %s", doc_id, model_name
+            )
+            return jsonify({"error": str(exc)}), 500
+        if error:
+            return jsonify({"error": error}), 400
+        new_rank = new_rank_map.get(doc_id)
+        new_score = new_score_map.get(doc_id)
+    else:
+        modified_corpus = _build_modified_corpus(doc_id, title, abstract)
+        try:
+            modified_ranker = build_ranker(model_name, modified_corpus, use_cache=False)
+            if not modified_ranker:
+                return jsonify({"error": "model not available"}), 400
+            modified_results = modified_ranker.rank(query_text, top_k=top_k)
+            new_rank = next(
+                (idx + 1 for idx, item in enumerate(modified_results) if item["id"] == doc_id),
+                None,
+            )
+            new_score = next(
+                (item["score"] for item in modified_results if item["id"] == doc_id),
+                None,
+            )
+        except Exception as exc:
+            LOGGER.exception(
+                "Modified ranking failed for doc %s model %s", doc_id, model_name
+            )
+            return jsonify({"error": str(exc)}), 500
 
     url = ""
     if CORPUS_RAW and doc_id in CORPUS_RAW:
@@ -843,6 +957,156 @@ def doc_rerank():
     return jsonify(response)
 
 
+@app.route("/api/docs/rerank/batch", methods=["POST"])
+def doc_rerank_batch():
+    payload = request.get_json(silent=True) or {}
+    model_name = payload.get("model")
+    query_id = payload.get("query_id")
+    docs = payload.get("docs") or []
+
+    if not model_name or not query_id:
+        return jsonify({"error": "model and query_id are required"}), 400
+
+    query_text = _get_query_text(query_id)
+    if not query_text:
+        return jsonify({"error": "query not found"}), 404
+
+    if not isinstance(docs, list) or not docs:
+        return jsonify({"error": "docs is required"}), 400
+    if len({str(d.get("doc_id") or "") for d in docs}) != len(docs):
+        return jsonify({"error": "duplicate doc_id in request"}), 400
+
+    top_k = len(CORPUS)
+    try:
+        original_ranker = get_ranker(model_name, CORPUS)
+    except Exception as exc:
+        LOGGER.exception("Ranker init failed for model %s", model_name)
+        return jsonify({"error": str(exc)}), 500
+    if not original_ranker:
+        return jsonify({"error": "model not available"}), 400
+
+    try:
+        original_results = original_ranker.rank(query_text, top_k=top_k)
+    except Exception as exc:
+        LOGGER.exception("Original ranking failed for model %s", model_name)
+        return jsonify({"error": str(exc)}), 500
+
+    old_rank_map = {}
+    old_score_map = {}
+    for idx, item in enumerate(original_results, start=1):
+        old_rank_map[item["id"]] = idx
+        old_score_map[item["id"]] = item["score"]
+
+    results = []
+    edits = {}
+    for doc in docs:
+        doc_id = str(doc.get("doc_id") or "")
+        title = doc.get("title") or ""
+        abstract = doc.get("abstract") or ""
+        if not doc_id:
+            results.append({"doc_id": doc_id, "error": "doc_id is required"})
+            continue
+        if doc_id not in DOC_INDEX:
+            results.append({"doc_id": doc_id, "error": "doc not found"})
+            continue
+        edits[doc_id] = {"title": title, "abstract": abstract}
+
+    if not edits:
+        return jsonify({"error": "no valid docs to rerank"}), 400
+
+    modified_corpus = []
+    for doc in CORPUS:
+        doc_id = str(doc["id"])
+        if doc_id in edits:
+            edit = edits[doc_id]
+            modified_corpus.append(
+                {
+                    "id": doc["id"],
+                    "title": edit["title"] or doc.get("title", ""),
+                    "text": _format_doc_text(edit["title"] or "", edit["abstract"] or ""),
+                }
+            )
+        else:
+            modified_corpus.append(doc)
+
+    if _is_dense_model(model_name):
+        try:
+            new_rank_map, new_score_map, error = _rank_dense_modified(
+                model_name, query_text, edits
+            )
+        except Exception as exc:
+            LOGGER.exception("Modified ranking failed for model %s", model_name)
+            return jsonify({"error": str(exc)}), 500
+        if error:
+            return jsonify({"error": error}), 400
+    else:
+        try:
+            modified_ranker = build_ranker(model_name, modified_corpus, use_cache=False)
+        except Exception as exc:
+            LOGGER.exception("Modified ranker init failed for model %s", model_name)
+            return jsonify({"error": str(exc)}), 500
+        if not modified_ranker:
+            return jsonify({"error": "model not available"}), 400
+
+        try:
+            modified_results = modified_ranker.rank(query_text, top_k=top_k)
+        except Exception as exc:
+            LOGGER.exception("Modified ranking failed for model %s", model_name)
+            return jsonify({"error": str(exc)}), 500
+
+        new_rank_map = {}
+        new_score_map = {}
+        for idx, item in enumerate(modified_results, start=1):
+            new_rank_map[item["id"]] = idx
+            new_score_map[item["id"]] = item["score"]
+
+    for doc_id, edit in edits.items():
+        old_rank = old_rank_map.get(doc_id)
+        old_score = old_score_map.get(doc_id)
+        new_rank = new_rank_map.get(doc_id)
+        new_score = new_score_map.get(doc_id)
+
+        url = ""
+        if CORPUS_RAW and doc_id in CORPUS_RAW:
+            url = CORPUS_RAW[doc_id].get("url") or ""
+        _save_modified_doc(model_name, doc_id, edit["title"], edit["abstract"], url)
+
+        results.append(
+            {
+                "doc_id": doc_id,
+                "old_rank": old_rank,
+                "new_rank": new_rank,
+                "rank_change": None
+                if old_rank is None or new_rank is None
+                else new_rank - old_rank,
+                "old_score": old_score,
+                "new_score": new_score,
+                "plot_url": f"/plots/klrvf_comparisons/{doc_id}_{model_name}_comprehensive.png",
+            }
+        )
+
+    plot_error = None
+    try:
+        env = os.environ.copy()
+        env.setdefault("PROJECT_ROOT", APP_DIR)
+        result = subprocess.run(
+            ["python", "scripts/plot_klrvf_comparison.py"],
+            env=env,
+            cwd=APP_DIR,
+            check=False,
+        )
+        if result.returncode != 0:
+            plot_error = "plot generation failed"
+    except Exception as exc:
+        LOGGER.exception("KLRVF plot generation failed for batch model %s", model_name)
+        plot_error = str(exc)
+
+    response = {"status": "ok", "results": results}
+    if plot_error:
+        response["plot_error"] = plot_error
+    return jsonify(response)
+
+
 @app.route("/api/rank", methods=["POST"])
 def rank():
     payload = request.get_json(silent=True) or {}
@@ -868,6 +1132,31 @@ def rank():
 
     if not query_text:
         return jsonify({"error": "query text is required"}), 400
+
+    if query_id:
+        cached_rows = _get_rankings_for_query(model_name, query_id)
+        if cached_rows and len(cached_rows) >= len(CORPUS):
+            results = []
+            limit = len(CORPUS) if top_k == len(CORPUS) else top_k
+            for row in cached_rows[:limit]:
+                doc_id = str(row.get("doc_id") or "")
+                idx = DOC_INDEX.get(doc_id)
+                if idx is None:
+                    continue
+                doc = CORPUS[idx]
+                try:
+                    score = float(row.get("doc_score"))
+                except (TypeError, ValueError):
+                    score = None
+                results.append(
+                    {
+                        "id": doc["id"],
+                        "title": doc.get("title", ""),
+                        "text": doc.get("text", ""),
+                        "score": score if score is not None else 0.0,
+                    }
+                )
+            return jsonify({"query": query_text, "results": results})
 
     cache_key = (model_name, query_text, top_k)
     if cache_key in RANK_CACHE:

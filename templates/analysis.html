@@ -7,17 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   </head>
   <body>
+    {% set active_page = "analysis" %}
+    {% include "partials/header.html" %}
     <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/">NF-Corpus Lab</a>
-        <div class="nav-links">
-          <a href="/">Home</a>
-          <a href="/models">Models</a>
-          <a href="/queries">Queries</a>
-          <a href="/rankings">Rankings</a>
-          <a href="/analysis">Analysis</a>
-        </div>
-      </nav>
       <header class="hero">
         <h1>Ranking Analysis</h1>
         <p>Static plots generated from full-model rankings.</p>

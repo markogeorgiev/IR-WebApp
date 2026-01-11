@@ -7,17 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   </head>
   <body>
+    {% set active_page = "queries" %}
+    {% include "partials/header.html" %}
     <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/">NF-Corpus Lab</a>
-        <div class="nav-links">
-          <a href="/">Home</a>
-          <a href="/models">Models</a>
-          <a href="/queries">Queries</a>
-          <a href="/rankings">Rankings</a>
-          <a href="/analysis">Analysis</a>
-        </div>
-      </nav>
       <header class="hero">
         <h1>Query Dashboard</h1>
         <p>Edit, add, or delete queries stored in the persistent set.</p>
@@ -34,7 +26,6 @@
         <textarea id="new-query" rows="3" placeholder="Add a new query"></textarea>
         <div class="actions">
           <button id="add-query">Add query</button>
-          <button class="button-danger" id="reset-queries">Reset to default</button>
         </div>
         <p class="hint" id="query-status"></p>
       </section>

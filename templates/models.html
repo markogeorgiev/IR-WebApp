@@ -7,85 +7,88 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   </head>
   <body>
+    {% set active_page = "models" %}
+    {% include "partials/header.html" %}
     <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/">NF-Corpus Lab</a>
-        <div class="nav-links">
-          <a href="/">Home</a>
-          <a href="/models">Models</a>
-          <a href="/queries">Queries</a>
-          <a href="/rankings">Rankings</a>
-          <a href="/analysis">Analysis</a>
-        </div>
-      </nav>
       <header class="hero">
         <h1>Model Selection</h1>
         <p>Pick a query and ranking model to see the top results.</p>
       </header>
 
-      <section class="card">
-        <h2>Choose Inputs</h2>
-        <div class="grid">
-          <div>
-            <label for="query-select">Query</label>
-            <select id="query-select"></select>
-            <p class="hint" id="query-source"></p>
-          </div>
-          <div>
-            <label for="model-select">Model</label>
-            <select id="model-select"></select>
-            <p class="hint" id="model-status"></p>
-          </div>
-          <div class="results-control">
-            <label for="top-k">Results to show</label>
-            <select id="top-k">
-              <option value="5">5</option>
-              <option value="10" selected>10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="all">All</option>
-            </select>
-            <p class="hint">Choose how many top documents to display.</p>
-          </div>
+      <div class="main-layout">
+        <div class="primary-panel">
+          <section class="card">
+            <h2>Configuration</h2>
+            <div class="grid-3">
+              <div>
+                <label for="query-select">Query</label>
+                <select id="query-select"></select>
+                <p class="hint" id="query-source"></p>
+              </div>
+              <div>
+                <label for="model-select">Model</label>
+                <select id="model-select"></select>
+                <p class="hint" id="model-status"></p>
+              </div>
+              <div class="results-control">
+                <label for="top-k">Results to show</label>
+                <select id="top-k">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                  <option value="500">500</option>
+                  <option value="1000">1000</option>
+                  <option value="all">All</option>
+                </select>
+                <p class="hint">Choose how many top documents to display.</p>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="rank-btn" class="button-primary">Rank Content</button>
+              <a class="button-link" href="/">Back</a>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Model Console</h2>
+            <div id="model-console" class="console">
+              <div class="console-line">System ready. Choose a query and model.</div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Top Results</h2>
+            <div id="results"></div>
+          </section>
         </div>
-        <div class="actions">
-          <button id="rank-btn">Rank Content</button>
-          <a class="button-link" href="/">Back to upload</a>
-        </div>
-      </section>
 
-      <section class="card">
-        <h2>Model Console</h2>
-        <div id="model-console" class="console">
-          <div class="console-line">System ready. Choose a query and model.</div>
-        </div>
-      </section>
+        <aside class="secondary-panel">
+          <section class="card action-card">
+            <div class="card-icon">>>></div>
+            <h3>Rankings Dashboard</h3>
+            <p>Generate rankings per model/query and refresh plots.</p>
+            <a class="button-link button-primary" href="/rankings">Open</a>
+          </section>
 
-      <section class="card">
-        <h2>Top Results</h2>
-        <div id="results"></div>
-      </section>
+          <section class="card action-card">
+            <div class="card-icon">---</div>
+            <h3>Analysis</h3>
+            <p>Explore corpus-level agreement and feature diagnostics.</p>
+            <a class="button-link button-primary" href="/analysis">Open</a>
+          </section>
 
-      <section class="card">
-        <h2>Analysis</h2>
-        <p>Explore corpus-level agreement and feature diagnostics.</p>
-        <a class="button-link" href="/analysis">Open analysis dashboard</a>
-      </section>
-
-      <section class="card">
-        <h2>Rankings Dashboard</h2>
-        <p>Generate rankings per model/query and refresh plots.</p>
-        <a class="button-link" href="/rankings">Open rankings dashboard</a>
-      </section>
-
-      <section class="card">
-        <h2>Maintenance</h2>
-        <p>Clearing embeddings forces dense models to re-embed the corpus (slow on CPU).</p>
-        <div class="actions">
-          <button class="button-danger" id="clear-embedding-cache">Clear embedding cache</button>
-        </div>
-      </section>
+          <section class="card danger-card">
+            <h3>Cache Management</h3>
+            <p class="small">
+              Clear embeddings to force dense models to re-embed the corpus (slow on CPU).
+            </p>
+            <button class="button-danger" id="clear-embedding-cache">Clear cache</button>
+          </section>
+        </aside>
+      </div>
     </div>
 
     <div id="result-modal" class="modal hidden" role="dialog" aria-modal="true">

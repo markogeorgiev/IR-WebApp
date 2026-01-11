@@ -2,17 +2,14 @@ import os
 
 from rankers.bm25 import BM25Ranker
 from rankers.e5 import E5SmallRanker
-from rankers.ql_dirichlet import QLDirichletRanker
-from rankers.sbert import SBERTRanker, SBERTMiniLMRanker
+from rankers.sbert import SBERTMiniLMRanker
 from rankers.tfidf import TFIDFRanker
 
 RANKER_CLASSES = [
     BM25Ranker,
     TFIDFRanker,
-    SBERTRanker,
     SBERTMiniLMRanker,
     E5SmallRanker,
-    QLDirichletRanker,
 ]
 _CACHE = {}
 

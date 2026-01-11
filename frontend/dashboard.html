@@ -7,35 +7,46 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <div class="container wide">
-      <nav class="top-nav">
-        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+    <nav class="top-nav">
+      <div class="nav-inner">
+        <a class="brand" href="/index.html">
+          <img class="brand-logo" src="/static/AIR-G22-IRMCN.png" alt="AIR-G22 IRMCN logo" />
+          <span class="brand-text">NF-Corpus Lab</span>
+        </a>
         <div class="nav-links">
           <a href="/index.html">Home</a>
           <a href="/models.html">Models</a>
           <a href="/queries.html">Queries</a>
-          <a href="/dashboard.html">Dashboard</a>
+          <a href="/dashboard.html" class="active">Dashboard</a>
           <a href="/doc_editor.html">Doc Improvement</a>
         </div>
-      </nav>
+      </div>
+    </nav>
+
+    <div class="container wide">
       <header class="hero">
-        <h1>Ranking & Analysis Dashboard</h1>
-        <p>Generate rankings, track coverage, and explore plots.</p>
+        <h1>Analysis Dashboard</h1>
+        <p>Generate rankings, track coverage, and explore analysis plots.</p>
       </header>
 
-      <section class="card">
-        <h2>Coverage</h2>
-        <div id="coverage-table"></div>
-      </section>
+      <div class="dashboard-grid">
+        <section class="card">
+          <h2>Coverage</h2>
+          <div id="coverage-table"></div>
+        </section>
+
+        <section class="card">
+          <h2>Embedding Cache</h2>
+          <div id="embedding-cache"></div>
+          <div class="actions">
+            <button class="button-danger" id="clear-embedding-cache">Clear cache</button>
+          </div>
+        </section>
+      </div>
 
       <section class="card">
-        <h2>Embedding Cache</h2>
-        <div id="embedding-cache"></div>
-      </section>
-
-      <section class="card">
-        <h2>Generate Rankings</h2>
-        <div class="grid">
+        <h2>Ranking Generator</h2>
+        <div class="grid-3">
           <div>
             <label for="rank-model">Model</label>
             <select id="rank-model"></select>
@@ -44,18 +55,20 @@
             <label for="rank-query">Query</label>
             <select id="rank-query"></select>
           </div>
+          <div>
+            <p class="hint" id="rank-status">Status: idle</p>
+          </div>
         </div>
         <div class="actions">
-          <button id="run-ranking" title="Run rankings for the selected model and query.">Run ranking</button>
-          <button id="run-all-models" title="Run rankings for every model using the selected query.">All models × selected query</button>
-          <button id="run-all-queries" title="Run rankings for the selected model across all queries.">Selected model × all queries</button>
-          <button id="run-plots" title="Regenerate plots using the rankings already on disk.">Generate plots from existing rankings</button>
+          <button id="run-ranking" class="button-primary" title="Run rankings for the selected model and query.">Run ranking</button>
+          <button id="run-all-models" title="Run rankings for every model using the selected query.">All models</button>
+          <button id="run-all-queries" title="Run rankings for the selected model across all queries.">All queries</button>
+          <button id="run-plots" title="Regenerate plots using the rankings already on disk.">Generate plots</button>
         </div>
-        <p class="hint" id="rank-status">Status: idle</p>
       </section>
 
       <section class="card">
-        <h2>Ranking Console</h2>
+        <h2>System Console</h2>
         <div id="ranking-console" class="console">
           <div class="console-line">Ready to generate rankings.</div>
         </div>

@@ -1,0 +1,15 @@
+<nav class="top-nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <img class="brand-logo" src="/static/AIR-G22-IRMCN.png" alt="AIR-G22 IRMCN logo" />
+      <span class="brand-text">NF-Corpus Lab</span>
+    </a>
+    <div class="nav-links">
+      <a href="/" class="{{ 'active' if active_page == 'home' else '' }}">Home</a>
+      <a href="/models" class="{{ 'active' if active_page == 'models' else '' }}">Models</a>
+      <a href="/queries" class="{{ 'active' if active_page == 'queries' else '' }}">Queries</a>
+      <a href="/rankings" class="{{ 'active' if active_page == 'rankings' else '' }}">Rankings</a>
+      <a href="/analysis" class="{{ 'active' if active_page == 'analysis' else '' }}">Analysis</a>
+    </div>
+  </div>
+</nav>

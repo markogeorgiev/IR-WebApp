@@ -7,73 +7,93 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+    <nav class="top-nav">
+      <div class="nav-inner">
+        <a class="brand" href="/index.html">
+          <img class="brand-logo" src="/static/AIR-G22-IRMCN.png" alt="AIR-G22 IRMCN logo" />
+          <span class="brand-text">NF-Corpus Lab</span>
+        </a>
         <div class="nav-links">
-          <a href="/index.html">Home</a>
+          <a href="/index.html" class="active">Home</a>
           <a href="/models.html">Models</a>
           <a href="/queries.html">Queries</a>
           <a href="/dashboard.html">Dashboard</a>
           <a href="/doc_editor.html">Doc Improvement</a>
         </div>
-      </nav>
+      </div>
+    </nav>
+
+    <div class="container">
       <header class="hero">
         <h1>NF-Corpus Ranking Lab</h1>
         <p>Upload or paste queries, then compare ranking models.</p>
       </header>
 
-      <section class="card">
-        <h2>Load Query Set</h2>
-        <p class="status">
-          Current: <strong id="current-source">loading</strong> with
-          <strong id="current-count">0</strong> queries.
-        </p>
-        <form id="query-form">
-          <label for="queries_text">Paste queries (one per line)</label>
-          <textarea
-            id="queries_text"
-            name="queries_text"
-            rows="6"
-            placeholder="e.g. treatments for irritable bowel syndrome"
-          ></textarea>
+      <div class="main-layout">
+        <div class="primary-panel">
+          <section class="card">
+            <h2>Load Query Set</h2>
+            <p class="status">
+              Current: <strong id="current-source">loading</strong> with
+              <strong id="current-count">0</strong> queries.
+            </p>
+            <form id="query-form">
+              <label for="queries_text">Paste queries (one per line)</label>
+              <textarea
+                id="queries_text"
+                name="queries_text"
+                rows="6"
+                placeholder="e.g. treatments for irritable bowel syndrome"
+              ></textarea>
 
-          <label for="query_file">Or upload JSON/CSV</label>
-          <input id="query_file" type="file" name="file" />
+              <label for="query_file">Or upload JSON/CSV</label>
+              <input id="query_file" type="file" name="file" />
 
-          <div class="actions">
-            <button type="submit" data-source="text" title="Upload the queries you pasted or selected in the file input.">Upload</button>
-            <button type="button" id="use-default" title="Replace the current set with the bundled NF-Corpus query list.">Use default NF-Corpus queries</button>
-          </div>
-        </form>
-        <p id="upload-status" class="status"></p>
-      </section>
+              <div class="actions">
+                <button type="submit" data-source="text" title="Upload the queries you pasted or selected in the file input.">Upload</button>
+              </div>
+            </form>
+            <p id="upload-status" class="status"></p>
+          </section>
 
-      <section class="card">
-        <h2>Query Dashboard</h2>
-        <p>Edit, add, or delete queries in the persistent set.</p>
-        <a class="button-link" href="/queries.html" title="Edit, add, or delete saved queries.">Open query dashboard</a>
-      </section>
+          <section class="card">
+            <h2>Query Management</h2>
+            <p>Edit, add, or delete queries in the persistent set.</p>
+            <a class="button-link" href="/queries.html" title="Edit, add, or delete saved queries.">Open query dashboard</a>
+          </section>
+        </div>
 
-      <section class="card">
-        <h2>Next Step</h2>
-        <p>Once your query set is uploaded, move on to model selection.</p>
-        <a class="button-link" href="/models.html" title="Choose a model and rank documents for a query.">Go to model selection</a>
-      </section>
+        <aside class="secondary-panel">
+          <section class="card action-card">
+            <div class="card-icon">→</div>
+            <h3>Model Selection</h3>
+            <p>Pick a query and model to rank documents.</p>
+            <a class="button-link button-primary" href="/models.html" title="Choose a model and rank documents for a query.">Go to models</a>
+          </section>
 
-      <section class="card">
-        <h2>Dashboard</h2>
-        <p>Generate rankings, track cache state, and view plots.</p>
-        <a class="button-link" href="/dashboard.html" title="Manage rankings, cache status, and plots.">Open dashboard</a>
-      </section>
+          <section class="card action-card">
+            <div class="card-icon">📊</div>
+            <h3>Dashboard</h3>
+            <p>View rankings, cache status, and analysis plots.</p>
+            <a class="button-link button-primary" href="/dashboard.html" title="Manage rankings, cache status, and plots.">Open dashboard</a>
+          </section>
 
-      <section class="card">
-        <h2>Document Improvement</h2>
-        <p>Edit documents and compare ranking + feature changes.</p>
-        <a class="button-link" href="/doc_editor.html">Open editor</a>
-      </section>
+          <section class="card action-card">
+            <div class="card-icon">✎</div>
+            <h3>Doc Improvement</h3>
+            <p>Edit documents and compare ranking changes.</p>
+            <a class="button-link button-primary" href="/doc_editor.html">Open editor</a>
+          </section>
+        </aside>
+      </div>
     </div>
 
+    <div id="drop-overlay" class="drop-overlay hidden">
+      <div class="drop-overlay-content">
+        Drop your query file to upload
+        <span>.json or .csv</span>
+      </div>
+    </div>
     <script src="/static/app.js" data-page="index"></script>
   </body>
 </html>

@@ -7,17 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   </head>
   <body>
+    {% set active_page = "rankings" %}
+    {% include "partials/header.html" %}
     <div class="container">
-      <nav class="top-nav">
-        <a class="brand" href="/">NF-Corpus Lab</a>
-        <div class="nav-links">
-          <a href="/">Home</a>
-          <a href="/models">Models</a>
-          <a href="/queries">Queries</a>
-          <a href="/rankings">Rankings</a>
-          <a href="/analysis">Analysis</a>
-        </div>
-      </nav>
       <header class="hero">
         <h1>Rankings Dashboard</h1>
         <p>Generate rankings for models and queries, then refresh plots.</p>
@@ -31,6 +23,9 @@
       <section class="card">
         <h2>Embedding Cache</h2>
         <div id="embedding-cache"></div>
+        <div class="actions">
+          <button class="button-danger" id="clear-embedding-cache">Clear cache</button>
+        </div>
       </section>
 
       <section class="card">

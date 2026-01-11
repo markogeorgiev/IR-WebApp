@@ -1,5 +1,7 @@
 import itertools
 import logging
+import os
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +10,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from dotenv import load_dotenv
-import os
+
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", ".")).resolve()
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from rankers.registry import list_rankers
 
 load_dotenv()
 
@@ -18,17 +25,13 @@ logging.basicConfig(
 )
 LOGGER = logging.getLogger("plot_agreement")
 
-PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", ".")).resolve()
-
 RANKINGS_DIR = PROJECT_ROOT / os.getenv("RANKINGS_DIR")
-PLOTS_DIR = PROJECT_ROOT  / os.getenv("PLOTS_DIR") / "rbo"
+PLOTS_DIR = PROJECT_ROOT / os.getenv("PLOTS_DIR") / "rbo"
 
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
-RANKING_FILES = list(RANKINGS_DIR.glob("rankings_*.csv"))
-
-SPARSE = {"bm25", "tfidf", "ql-dirichlet"}
-DENSE = {"sbert", "sbert-minilm-v6", "e5-small-v2"}
+SPARSE = {"bm25", "tfidf"}
+DENSE = {"sbert-minilm-v6", "e5-small-v2"}
 
 # Set style
 sns.set_style("whitegrid")
@@ -51,11 +54,12 @@ def prefix_overlap_curve(l1, l2, max_k=100):
     return curve
 
 
-def load_rankings():
+def load_rankings(ranking_files, allowed_models):
     df = pd.concat(
-        [pd.read_csv(f, dtype={"query_id": str}) for f in RANKING_FILES],
+        [pd.read_csv(f, dtype={"query_id": str}) for f in ranking_files],
         ignore_index=True,
     )
+    df = df[df["model"].isin(allowed_models)]
 
     rankings = {
         (m, q): g.sort_values("doc_rank")["doc_id"].tolist()
@@ -66,6 +70,27 @@ def load_rankings():
     queries = sorted(df["query_id"].unique())
 
     return rankings, models, queries
+
+
+def _allowed_models():
+    return {m["name"] for m in list_rankers()}
+
+
+def _filter_ranking_files():
+    allowed = _allowed_models()
+    ranking_files = []
+    for path in RANKINGS_DIR.glob("rankings_*.csv"):
+        model_name = path.stem.replace("rankings_", "")
+        if model_name in allowed:
+            ranking_files.append(path)
+            continue
+        LOGGER.info("Ignoring rankings for removed model: %s", model_name)
+        try:
+            path.unlink()
+            LOGGER.info("Deleted stale rankings file: %s", path.name)
+        except OSError:
+            LOGGER.warning("Failed to delete stale rankings file: %s", path.name)
+    return ranking_files
 
 
 def plot_group(curves, title, filename, max_k):
@@ -191,10 +216,14 @@ def plot_combined_comparison(curves_ss, curves_sd, curves_dd, max_k):
 
 
 def main():
-    if not RANKING_FILES:
+    allowed = _allowed_models()
+    ranking_files = _filter_ranking_files()
+    if not ranking_files:
         raise RuntimeError("No rankings_*.csv files found")
 
-    rankings, models, queries = load_rankings()
+    rankings, models, queries = load_rankings(ranking_files, allowed)
+    if not models:
+        raise RuntimeError("No rankings for active models after filtering.")
     max_k = 100
 
     curves_ss = {}

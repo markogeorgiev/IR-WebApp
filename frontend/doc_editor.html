@@ -7,29 +7,39 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <div class="container wide">
-      <nav class="top-nav">
-        <a class="brand" href="/index.html">NF-Corpus Lab</a>
+    <nav class="top-nav">
+      <div class="nav-inner">
+        <a class="brand" href="/index.html">
+          <img class="brand-logo" src="/static/AIR-G22-IRMCN.png" alt="AIR-G22 IRMCN logo" />
+          <span class="brand-text">NF-Corpus Lab</span>
+        </a>
         <div class="nav-links">
           <a href="/index.html">Home</a>
           <a href="/models.html">Models</a>
           <a href="/queries.html">Queries</a>
           <a href="/dashboard.html">Dashboard</a>
-          <a href="/doc_editor.html">Doc Improvement</a>
+          <a href="/doc_editor.html" class="active">Doc Improvement</a>
         </div>
-      </nav>
+      </div>
+    </nav>
+
+    <div class="container wide">
       <header class="hero">
         <h1>Document Improvement</h1>
         <p>Search and edit documents, then compare ranking and feature changes.</p>
       </header>
 
       <section class="card">
+        <h2>Bulk Upload</h2>
+        <p class="small">Upload a CSV with columns: model, doc_id, title, abstract.</p>
         <div class="actions">
-          <button id="add-doc-block">Add another document</button>
+          <input id="doc-csv" type="file" accept=".csv,text/csv" />
+          <button id="doc-csv-upload" class="button-primary">Load CSV</button>
         </div>
+        <p class="hint" id="doc-csv-status">Ready.</p>
       </section>
 
-      <div id="doc-blocks"></div>
+      <div id="model-sections"></div>
     </div>
 
     <div id="plot-modal" class="modal hidden" role="dialog" aria-modal="true">
@@ -42,6 +52,50 @@
           <div class="plot-modal-frame">
             <img id="plot-modal-image" class="modal-image" src="" alt="Plot preview" />
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="doc-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content doc-modal">
+        <div class="modal-header">
+          <h3>Add document to <span id="doc-modal-model">Model</span></h3>
+          <button class="modal-close" id="doc-modal-close" aria-label="Close">x</button>
+        </div>
+        <div class="modal-body">
+          <div class="doc-modal-grid">
+            <div class="doc-modal-field">
+              <label for="doc-search-input">Search document</label>
+              <input id="doc-search-input" type="text" placeholder="Search by ID or text" />
+              <div class="doc-modal-actions">
+                <button id="doc-search-btn">Search</button>
+              </div>
+            </div>
+            <div class="doc-modal-field">
+              <label for="doc-select">Search results</label>
+              <select id="doc-select"></select>
+              <div class="doc-modal-actions">
+                <button id="doc-load-btn">Load document</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-modal-grid">
+            <div class="doc-modal-field">
+              <label for="doc-title-input">Title (read-only)</label>
+              <input id="doc-title-input" type="text" readonly />
+            </div>
+            <div class="doc-modal-field">
+              <label for="doc-abstract-input">Abstract</label>
+              <textarea id="doc-abstract-input" rows="6"></textarea>
+            </div>
+          </div>
+
+          <div class="doc-modal-footer">
+            <button id="doc-add-btn" class="button-primary">Add document</button>
+            <button id="doc-cancel-btn">Cancel</button>
+          </div>
+          <p class="hint" id="doc-modal-status">Ready.</p>
         </div>
       </div>
     </div>
