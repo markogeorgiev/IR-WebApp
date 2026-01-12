@@ -10,6 +10,10 @@ try:
     from sentence_transformers import SentenceTransformer
 except ImportError:  # pragma: no cover - optional dependency
     SentenceTransformer = None
+try:
+    import torch
+except ImportError:  # pragma: no cover - optional dependency
+    torch = None
 
 
 class SBERTRanker(BaseRanker):
@@ -25,7 +29,8 @@ class SBERTRanker(BaseRanker):
             raise RuntimeError("sentence-transformers is not installed")
         super().__init__(corpus)
         model_name = model_name or "sentence-transformers/all-MiniLM-L6-v2"
-        self._model = SentenceTransformer(model_name)
+        device = "cuda" if torch and torch.cuda.is_available() else "cpu"
+        self._model = SentenceTransformer(model_name, device=device)
         self._model_name = model_name
         cache_dir = os.environ.get("EMBEDDING_CACHE_DIR", "data/cache")
         os.makedirs(cache_dir, exist_ok=True)
