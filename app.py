@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass, field
 
 import numpy as np
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory
 
 from rankers.registry import build_ranker, clear_cache, get_ranker, list_rankers
 
@@ -217,9 +217,29 @@ def index():
     )
 
 
+@app.route("/index.html")
+def index_alias():
+    return redirect("/")
+
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/dashboard.html")
+def dashboard_alias():
+    return redirect("/dashboard")
+
+
 @app.route("/models")
 def models():
     return render_template("models.html")
+
+
+@app.route("/models.html")
+def models_alias():
+    return redirect("/models")
 
 
 @app.route("/analysis")
@@ -230,6 +250,21 @@ def analysis():
 @app.route("/queries")
 def queries_dashboard():
     return render_template("queries.html")
+
+
+@app.route("/queries.html")
+def queries_alias():
+    return redirect("/queries")
+
+
+@app.route("/doc_editor")
+def doc_editor():
+    return render_template("doc_editor.html")
+
+
+@app.route("/doc_editor.html")
+def doc_editor_alias():
+    return redirect("/doc_editor")
 
 
 @app.route("/rankings")

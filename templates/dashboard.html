@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ranking Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    {% set active_page = "dashboard" %}
+    {% include "partials/header.html" %}
+
+    <div class="container wide">
+      <header class="hero">
+        <h1>Analysis Dashboard</h1>
+        <p>Generate rankings, track coverage, and explore analysis plots.</p>
+      </header>
+
+      <div class="dashboard-grid">
+        <section class="card">
+          <h2>Coverage</h2>
+          <div id="coverage-table"></div>
+        </section>
+
+        <section class="card">
+          <h2>Embedding Cache</h2>
+          <div id="embedding-cache"></div>
+          <div class="actions">
+            <button class="button-danger" id="clear-embedding-cache">Clear cache</button>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Ranking Generator</h2>
+        <div class="grid-3">
+          <div>
+            <label for="rank-model">Model</label>
+            <select id="rank-model"></select>
+          </div>
+          <div>
+            <label for="rank-query">Query</label>
+            <select id="rank-query"></select>
+          </div>
+          <div>
+            <p class="hint" id="rank-status">Status: idle</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="run-ranking" class="button-primary" title="Run rankings for the selected model and query.">Run ranking</button>
+          <button id="run-all-models" title="Run rankings for every model using the selected query.">All models</button>
+          <button id="run-all-queries" title="Run rankings for the selected model across all queries.">All queries</button>
+          <button id="run-plots" title="Regenerate plots using the rankings already on disk.">Generate plots</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>System Console</h2>
+        <div id="ranking-console" class="console">
+          <div class="console-line">Ready to generate rankings.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Analysis Plots</h2>
+        <p class="hint" id="analysis-status">Status: idle</p>
+        <div class="plot-grid">
+          <img class="plot-image" data-zoom="1.25" src="/plots/rbo/agreement_sparse_sparse.png" alt="Sparse-Sparse agreement plot" />
+          <img class="plot-image" data-zoom="1.25" src="/plots/rbo/agreement_sparse_dense.png" alt="Sparse-Dense agreement plot" />
+          <img class="plot-image" data-zoom="1.25" src="/plots/rbo/agreement_dense_dense.png" alt="Dense-Dense agreement plot" />
+          <img class="plot-image" data-zoom="1.25" src="/plots/rbo/agreement_combined.png" alt="Combined agreement plot" />
+          <img class="plot-image" data-zoom="1.1" src="/plots/feature_correlations.png" alt="Feature correlations heatmap" />
+          <img class="plot-image" data-zoom="1.1" src="/plots/feature_importances.png" alt="Feature importance heatmap" />
+        </div>
+      </section>
+    </div>
+
+    <div id="plot-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content plot-modal">
+        <div class="modal-header">
+          <h3>Plot Preview</h3>
+          <button class="modal-close" id="plot-modal-close" aria-label="Close">A-</button>
+        </div>
+        <div class="modal-body">
+          <div class="plot-modal-frame">
+            <img id="plot-modal-image" class="modal-image" src="" alt="Plot preview" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}" data-page="dashboard"></script>
+  </body>
+</html>
